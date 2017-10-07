@@ -14,7 +14,7 @@ $(document).ready(function () {
 
     function draw() {
         var ctx = document.getElementById('canvas').getContext('2d');
-        ctx.clearRect(0, 0, 520, 500);
+        ctx.clearRect(0, 0, 700, 700);
 
         ctx.drawImage(fishbowl, 0, 0, 600, 600 * fishbowl.height / fishbowl.width);
 
@@ -29,9 +29,13 @@ $(document).ready(function () {
         ctx.lineWidth = 5;
         ctx.stroke();
 
-
         // draw fish
-        ctx.drawImage(fish, 100, waterlinePts[0], 120, 120 * fish.height / fish.width);
+        ctx.save();
+        ctx.rotate( Math.PI / 3);
+        ctx.translate(400, 30);
+        ctx.drawImage(fish, -30, -20, 120, 120 * fish.height / fish.width);
+
+        ctx.restore();
         window.requestAnimationFrame(draw);
 };
 
