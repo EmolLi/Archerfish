@@ -1,15 +1,20 @@
 $(document).ready(function () {
+    const canvasWidth = 700;
     let fishbowl = new Image();
+    let bugPic = new Image();
     let fish = {
         img: new Image(),
         x: 400,
         y: 400,
         facingDirection: 'right'
     };
+    let bugs = {};
+
     let waterlinePts;
 
     // player control
     let fishSpeed = 3;
+    let windSpeed = 3;
     let keyboardControl = {
         right: false,
         left: false,
@@ -26,9 +31,17 @@ $(document).ready(function () {
     function init() {
         fishbowl.src = '../css/fishbowl.png';
         fish.img.src = '../css/fish.png';
+        bugPic.src = '../css/bug.png';
 
-        var width = 500, height = 700;
+        // generate waterline pts
+        let width = 500, height = 700;
         waterlinePts = calcWaterline(width, height, 100, 0.5);
+
+        // generate bugs
+        bugGeneration();
+
+        // createBug();
+
         window.requestAnimationFrame(draw);
     }
 
@@ -36,6 +49,7 @@ $(document).ready(function () {
         var ctx = document.getElementById('canvas').getContext('2d');
         ctx.clearRect(0, 0, 700, 700);
 
+        ctx.translate(0, 100);
         ctx.drawImage(fishbowl, 0, 0, 600, 600 * fishbowl.height / fishbowl.width);
 
         // draw water line
@@ -52,79 +66,118 @@ $(document).ready(function () {
         // draw fish
         ctx.save();
         ctx.translate(fish.x, fish.y);
-        if (fish.facingDirection == 'left'){
-            ctx.rotate( Math.PI / 3);
+        if (fish.facingDirection == 'left') {
+            ctx.rotate(Math.PI / 3);
         }
-        if (fish.facingDirection == 'right'){
-            ctx.rotate( 2 * Math.PI / 3);
+        if (fish.facingDirection == 'right') {
+            ctx.rotate(2 * Math.PI / 3);
         }
         // ctx.translate(fishX, fishY);
         ctx.drawImage(fish.img, -30, -20, 80, 80 * fish.img.height / fish.img.width);
 
         ctx.restore();
-
         calcFishPosition();
-        // fishX += 1;
-        // fishX += 1.73205;
-        // fishY += 0.5;
+
+        // draw bugs
+        ctx.translate(0, -100); // bug is above the fishbowl
+        calcBugPosition();
+        console.log(bugs);
+        _.forEach(bugs, b => {
+            ctx.drawImage(b.img, b.x, b.y, 80, 80 * b.img.height / b.img.width);
+        });
+
         window.requestAnimationFrame(draw);
-}
+    }
 
 
-/*
- * width and height are the overall width and height we have to work with, displace is
- * the maximum deviation value. This stops the terrain from going out of bounds if we choose
- */
+    /*
+     * width and height are the overall width and height we have to work with, displace is
+     * the maximum deviation value. This stops the terrain from going out of bounds if we choose
+     */
 
-function calcWaterline(width, height, displace, roughness) {
-    var points = [],
-        // Gives us a power of 2 based on our width
-        power = Math.pow(2, Math.ceil(Math.log(width) / (Math.log(2))));
+    function calcWaterline(width, height, displace, roughness) {
+        var points = [],
+            // Gives us a power of 2 based on our width
+            power = Math.pow(2, Math.ceil(Math.log(width) / (Math.log(2))));
 
-    // Set the initial left point
-    points[0] = height / 2 + (Math.random() * displace * 0.3) - displace * 0.3;
-    // set the initial right point
-    points[power] = height / 2 + (Math.random() * displace) - displace * 0.3;
-    displace *= roughness;
-
-    // Increase the number of segments
-    for (var i = 1; i < power; i *= 2) {
-        // Iterate through each segment calculating the center point
-        for (var j = (power / i) / 2; j < power; j += power / i) {
-            points[j] = ((points[j - (power / i) / 2] + points[j + (power / i) / 2]) / 2);
-            points[j] += (Math.random() * displace * 2) - displace
-        }
-        // reduce our random range
+        // Set the initial left point
+        points[0] = height / 2 + (Math.random() * displace * 0.3) - displace * 0.3;
+        // set the initial right point
+        points[power] = height / 2 + (Math.random() * displace) - displace * 0.3;
         displace *= roughness;
-    }
-    return points;
-}
 
-function calcFishPosition() {
-    if (keyboardControl.up) fish.y -= fishSpeed;
-    if (keyboardControl.down) fish.y += fishSpeed;
-    if (keyboardControl.left) fish.x -= fishSpeed;
-    if (keyboardControl.right) fish.x += fishSpeed;
-
-
-    // clear all statese
-    _.forEach(_.keys(keyboardControl), s => keyboardControl[s] = false);
-}
-
-function keyDownHandler(event){
-    // console.log(event.key);
-    if (keymap[event.key]){
-        keyboardControl[keymap[event.key]] = true;
+        // Increase the number of segments
+        for (var i = 1; i < power; i *= 2) {
+            // Iterate through each segment calculating the center point
+            for (var j = (power / i) / 2; j < power; j += power / i) {
+                points[j] = ((points[j - (power / i) / 2] + points[j + (power / i) / 2]) / 2);
+                points[j] += (Math.random() * displace * 2) - displace
+            }
+            // reduce our random range
+            displace *= roughness;
+        }
+        return points;
     }
 
-    if (event.key == 'ArrowLeft'){
-        fish.facingDirection = 'left';
+    function calcFishPosition() {
+        if (keyboardControl.up) fish.y -= fishSpeed;
+        if (keyboardControl.down) fish.y += fishSpeed;
+        if (keyboardControl.left) fish.x -= fishSpeed;
+        if (keyboardControl.right) fish.x += fishSpeed;
+
+
+        // clear all statese
+        _.forEach(_.keys(keyboardControl), s => keyboardControl[s] = false);
     }
-    if (event.key == 'ArrowRight'){
-        fish.facingDirection = 'right';
+
+    function calcBugPosition() {
+        _.forEach(_.keys(bugs), b => {
+            bugs[b].x += windSpeed * 0.3;
+            if (bugs[b].x >= canvasWidth) delete bugs[b];
+        });
     }
-    // console.log(keyboardControl);
-}
+
+
+    let createBug = function () {
+        let id = window.makeID();
+        while (bugs.hasOwnProperty(id)) {    // make sure no duplicate id
+            id = window.makeID();
+        }
+        let bug = {
+            img: bugPic,
+            // img: new Image(),
+            x: 0,
+            y: Math.random()*30,
+            id: id
+        };
+        // bug.img.src = '../css/bug.png';
+        bugs[id] = bug;
+    };
+
+    function keyDownHandler(event) {
+        // console.log(event.key);
+        if (keymap[event.key]) {
+            keyboardControl[keymap[event.key]] = true;
+        }
+
+        if (event.key == 'ArrowLeft') {
+            fish.facingDirection = 'left';
+        }
+        if (event.key == 'ArrowRight') {
+            fish.facingDirection = 'right';
+        }
+        // console.log(keyboardControl);
+    }
+
+    // a bug is generated every 3-5 secs
+    function bugGeneration() {
+        let time = Math.random()*3000 + 2000;
+        console.log(time);
+        setTimeout(() => {
+            createBug();
+            bugGeneration();
+        }, time);
+    }
 
     init();
     document.addEventListener('keydown', keyDownHandler, false);
