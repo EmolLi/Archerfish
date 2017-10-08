@@ -39,8 +39,7 @@ $(document).ready(function () {
 
         // generate bugs
         bugGeneration();
-
-        // createBug();
+        windSpeedUpdate();
 
         window.requestAnimationFrame(draw);
     }
@@ -81,7 +80,7 @@ $(document).ready(function () {
         // draw bugs
         ctx.translate(0, -100); // bug is above the fishbowl
         calcBugPosition();
-        console.log(bugs);
+        // console.log(bugs);
         _.forEach(bugs, b => {
             ctx.drawImage(b.img, b.x, b.y, 80, 80 * b.img.height / b.img.width);
         });
@@ -132,7 +131,7 @@ $(document).ready(function () {
 
     function calcBugPosition() {
         _.forEach(_.keys(bugs), b => {
-            bugs[b].x += windSpeed * 0.3;
+            bugs[b].x += windSpeed * 0.1;
             if (bugs[b].x >= canvasWidth) delete bugs[b];
         });
     }
@@ -172,11 +171,19 @@ $(document).ready(function () {
     // a bug is generated every 3-5 secs
     function bugGeneration() {
         let time = Math.random()*3000 + 2000;
-        console.log(time);
         setTimeout(() => {
             createBug();
             bugGeneration();
         }, time);
+    }
+
+    function windSpeedUpdate() {
+        let time = Math.random()*1000 + 1000;
+        setTimeout(() => {
+            windSpeed = Math.random()*8 + 2;
+            $('#windSpeed').text(windSpeed);
+            windSpeedUpdate();
+        }, time)
     }
 
     init();
