@@ -1,11 +1,31 @@
 $(document).ready(function () {
-    var fishbowl = new Image();
-    var fish = new Image();
-    var waterlinePts;
+    let fishbowl = new Image();
+    let fish = {
+        img: new Image(),
+        x: 400,
+        y: 400,
+        facingDirection: 'right'
+    };
+    let waterlinePts;
+
+    // player control
+    let fishSpeed = 3;
+    let keyboardControl = {
+        right: false,
+        left: false,
+        up: false,
+        down: false
+    };
+    const keymap = {
+        a: 'left',
+        d: 'right',
+        w: 'up',
+        s: 'down'
+    };
 
     function init() {
         fishbowl.src = '../css/fishbowl.png';
-        fish.src = '../css/fish.png';
+        fish.img.src = '../css/fish.png';
 
         var width = 500, height = 700;
         waterlinePts = calcWaterline(width, height, 100, 0.5);
@@ -31,13 +51,24 @@ $(document).ready(function () {
 
         // draw fish
         ctx.save();
-        ctx.rotate( Math.PI / 3);
-        ctx.translate(400, 30);
-        ctx.drawImage(fish, -30, -20, 120, 120 * fish.height / fish.width);
+        ctx.translate(fish.x, fish.y);
+        if (fish.facingDirection == 'left'){
+            ctx.rotate( Math.PI / 3);
+        }
+        if (fish.facingDirection == 'right'){
+            ctx.rotate( 2 * Math.PI / 3);
+        }
+        // ctx.translate(fishX, fishY);
+        ctx.drawImage(fish.img, -30, -20, 80, 80 * fish.img.height / fish.img.width);
 
         ctx.restore();
+
+        calcFishPosition();
+        // fishX += 1;
+        // fishX += 1.73205;
+        // fishY += 0.5;
         window.requestAnimationFrame(draw);
-};
+}
 
 
 /*
@@ -69,7 +100,34 @@ function calcWaterline(width, height, displace, roughness) {
     return points;
 }
 
-    init();
+function calcFishPosition() {
+    if (keyboardControl.up) fish.y -= fishSpeed;
+    if (keyboardControl.down) fish.y += fishSpeed;
+    if (keyboardControl.left) fish.x -= fishSpeed;
+    if (keyboardControl.right) fish.x += fishSpeed;
 
-})
-;
+
+    // clear all statese
+    _.forEach(_.keys(keyboardControl), s => keyboardControl[s] = false);
+}
+
+function keyDownHandler(event){
+    // console.log(event.key);
+    if (keymap[event.key]){
+        keyboardControl[keymap[event.key]] = true;
+    }
+
+    if (event.key == 'ArrowLeft'){
+        fish.facingDirection = 'left';
+    }
+    if (event.key == 'ArrowRight'){
+        fish.facingDirection = 'right';
+    }
+    // console.log(keyboardControl);
+}
+
+    init();
+    document.addEventListener('keydown', keyDownHandler, false);
+
+});
+
