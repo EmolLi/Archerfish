@@ -14,9 +14,14 @@ $(document).ready(function () {
     let bugPic = new Image();
     let fish = {
         img: new Image(),
-        x: 400,
+        x: 400, // used to draw fish on canvas
         y: 400,
-        facingDirection: 'right'
+        facingDirection: 'right',
+        collider: { // a circle, used for collision detection
+            xOffset: 0,
+            yOffset: 105,
+            radius: 38
+        }
     };
     let bugs = {};
 
@@ -84,6 +89,10 @@ $(document).ready(function () {
         ctx.rect(0, 0, 470, 1);
         ctx.stroke();
 
+        ctx.beginPath();
+        ctx.arc(fish.x, fish.y + 5, 38, 0, 2 * Math.PI);
+        ctx.stroke();
+
         // draw fish
         ctx.save();
         ctx.translate(fish.x, fish.y);
@@ -146,6 +155,12 @@ $(document).ready(function () {
         if (keyboardControl.left) fish.x -= fishSpeed;
         if (keyboardControl.right) fish.x += fishSpeed;
 
+        if (!isFishMovableArea()){
+            if (keyboardControl.up) fish.y += fishSpeed;
+            if (keyboardControl.down) fish.y -= fishSpeed;
+            if (keyboardControl.left) fish.x += fishSpeed;
+            if (keyboardControl.right) fish.x -= fishSpeed;
+        }
 
         // clear all statese
         _.forEach(_.keys(keyboardControl), s => keyboardControl[s] = false);
@@ -208,6 +223,23 @@ $(document).ready(function () {
         }, time)
     }
 
+
+    function isFishMovableArea() {
+        let x = fish.x + fish.collider.xOffset;
+        let y = fish.y + fish.collider.yOffset;
+        // below waterline
+        if (y < waterlinePts[fish.x + fish.collider.xOffset] + 100){
+            console.log("out of water");
+            return false;
+        }
+        // does not collide with fishbowl
+        if (fishbowl.radius - Math.sqrt(Math.pow(x - fishbowl.originAbsX, 2) + Math.pow(y - fishbowl.originAbsY, 2)) < fish.collider.radius){
+            console.log("collide with fishbowl");
+            return false;
+        }
+        return true;
+
+    }
 
     /**
      * collision detection
