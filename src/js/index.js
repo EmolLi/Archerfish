@@ -1,6 +1,16 @@
 $(document).ready(function () {
     const canvasWidth = 700;
-    let fishbowl = new Image();
+    let fishbowl = {
+        img: new Image(),
+        originAbsX: 290,
+        originAbsY: 330,
+        radius: 260,
+        leftOpeningAbsX: 85,
+        leftOpeningAbsY: 165,
+        rightOpeningAbsX: 470,
+        rightOpeningAbsY: 101
+    };
+
     let bugPic = new Image();
     let fish = {
         img: new Image(),
@@ -29,7 +39,7 @@ $(document).ready(function () {
     };
 
     function init() {
-        fishbowl.src = '../css/fishbowl.png';
+        fishbowl.img.src = '../css/fishbowl.png';
         fish.img.src = '../css/fish.png';
         bugPic.src = '../css/bug.png';
 
@@ -49,7 +59,7 @@ $(document).ready(function () {
         ctx.clearRect(0, 0, 700, 700);
 
         ctx.translate(0, 100);
-        ctx.drawImage(fishbowl, 0, 0, 600, 600 * fishbowl.height / fishbowl.width);
+        ctx.drawImage(fishbowl.img, 0, 0, 600, 600 * fishbowl.img.height / fishbowl.img.width);
 
         // draw water line
         ctx.beginPath();
@@ -60,6 +70,18 @@ $(document).ready(function () {
         }
         ctx.strokeStyle = "rgba(25, 126, 255, 0.49)";
         ctx.lineWidth = 5;
+        ctx.stroke();
+
+
+        // fishbowl size & position
+        ctx.beginPath();
+        ctx.arc(290, 230, 260, 0, 2 * Math.PI);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.rect(0, 0, 85, 65);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.rect(0, 0, 470, 1);
         ctx.stroke();
 
         // draw fish
@@ -146,7 +168,7 @@ $(document).ready(function () {
             img: bugPic,
             // img: new Image(),
             x: 0,
-            y: Math.random()*30,
+            y: Math.random() * 30,
             id: id
         };
         // bug.img.src = '../css/bug.png';
@@ -170,7 +192,7 @@ $(document).ready(function () {
 
     // a bug is generated every 3-5 secs
     function bugGeneration() {
-        let time = Math.random()*3000 + 2000;
+        let time = Math.random() * 3000 + 2000;
         setTimeout(() => {
             createBug();
             bugGeneration();
@@ -178,15 +200,54 @@ $(document).ready(function () {
     }
 
     function windSpeedUpdate() {
-        let time = Math.random()*1000 + 1000;
+        let time = Math.random() * 1000 + 1000;
         setTimeout(() => {
-            windSpeed = Math.random()*8 + 2;
+            windSpeed = Math.random() * 8 + 2;
             $('#windSpeed').text(windSpeed);
             windSpeedUpdate();
         }, time)
     }
 
+
+    /**
+     * collision detection
+     * check if the point collides with the fishbowl
+     * @param x
+     * @param y
+     * @param isInside is the point is inside the fishbowl at first (then collision is detected if the point now is outside, vice versa
+     */
+    function collisionDetectionWithFishBowl(x, y, isInside) {
+        // use a circle to represent the fishbowl.
+        // origin (290, 230 + 100)  // 100 is the translation
+        // radius 260
+
+        // is point inside the circle
+        let disToOrigin = Math.sqrt(Math.pow(x - fishbowl.originAbsX, 2) + Math.pow(y - fishbowl.originAbsY, 2));
+        if (isInside) {
+            if (disToOrigin > fishbowl.radius
+                && ((x < fishbowl.leftOpeningAbsX && y > fishbowl.leftOpeningAbsY)
+                || (x > fishbowl.rightOpeningAbsX && y > fishbowl.rightOpeningAbsY)
+                || (y > fishbowl.originAbsY))   // opening at the top,but not at the bottom
+            ) {
+                console.log("collision detected");
+                return true;
+            }
+        }
+        else {
+            console.log("in");
+        }
+        return false;
+    }
+
     init();
+
+    // get mouse position -> collision detection test
+    $('body').click(function (e) { //Default mouse Position
+        console.log(e.pageX + ' , ' + e.pageY);
+        collisionDetectionWithFishBowl(e.pageX, e.pageY, true);
+    });
+
+
     document.addEventListener('keydown', keyDownHandler, false);
 
 });
