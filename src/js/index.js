@@ -23,6 +23,11 @@ $(document).ready(function () {
             radius: 38
         }
     };
+    let bubblesSize = [3, 5, 8];
+    let bubbles = {};
+    let isShootingBubble = false;
+
+
     let bugs = {};
 
     let waterlinePts;
@@ -34,13 +39,15 @@ $(document).ready(function () {
         right: false,
         left: false,
         up: false,
-        down: false
+        down: false,
+        bubbles: false
     };
     const keymap = {
         a: 'left',
         d: 'right',
         w: 'up',
-        s: 'down'
+        s: 'down',
+        ' ': 'bubbles'
     };
 
     function init() {
@@ -116,6 +123,18 @@ $(document).ready(function () {
             ctx.drawImage(b.img, b.x, b.y, 80, 80 * b.img.height / b.img.width);
         });
 
+        // bubbles
+        shootBubbles();
+        calcBubblesPosition();
+        _.forEach(bubbles, b => {
+            ctx.beginPath();
+            ctx.arc(b.x, b.y , b.size, 0, 2 * Math.PI);
+            ctx.stroke();
+        });
+
+        // clear all statese
+        _.forEach(_.keys(keyboardControl), s => keyboardControl[s] = false);
+
         window.requestAnimationFrame(draw);
     }
 
@@ -155,17 +174,32 @@ $(document).ready(function () {
         if (keyboardControl.left) fish.x -= fishSpeed;
         if (keyboardControl.right) fish.x += fishSpeed;
 
-        if (!isFishMovableArea()){
+        if (!isFishMovableArea()) {
             if (keyboardControl.up) fish.y += fishSpeed;
             if (keyboardControl.down) fish.y -= fishSpeed;
             if (keyboardControl.left) fish.x += fishSpeed;
             if (keyboardControl.right) fish.x -= fishSpeed;
         }
-
-        // clear all statese
-        _.forEach(_.keys(keyboardControl), s => keyboardControl[s] = false);
     }
 
+    function shootBubbles() {
+        if (isShootingBubble) keyboardControl.bubbles = false;
+        if (keyboardControl.bubbles) {
+            isShootingBubble = true;
+            new Promise((resolve, reject) => {
+                for (let i = 1; i <= bubblesSize.length; i++){
+                    setTimeout(() => {createBubble(bubblesSize[i - 1]);}, 500 * i);
+                }
+                setTimeout(() => resolve(), bubblesSize.length * 1000);
+            }).then(() => isShootingBubble = false);
+        }
+    }
+
+    function calcBubblesPosition() {
+        _.forEach(bubbles, b => {
+            b.y--;
+        })
+    }
     function calcBugPosition() {
         _.forEach(_.keys(bugs), b => {
             bugs[b].x += windSpeed * 0.1;
@@ -190,8 +224,24 @@ $(document).ready(function () {
         bugs[id] = bug;
     };
 
+    let createBubble = function (size) {
+        let id = window.makeID();
+        while (bubbles.hasOwnProperty(id)) {
+            id = window.makeID();
+        }
+        let bubble = {
+            size: size,
+            x: fish.facingDirection == 'left' ?
+                fish.x + fish.collider.xOffset - 0.5 * (fish.collider.radius + 5) :
+                fish.x + fish.collider.xOffset + 0.5 * (fish.collider.radius + 5),
+            y: fish.y + fish.collider.yOffset - 0.866 * (fish.collider.radius + 5),
+            id: id
+        };
+        bubbles[id] = bubble;
+    };
+
     function keyDownHandler(event) {
-        // console.log(event.key);
+        console.log(event.key);
         if (keymap[event.key]) {
             keyboardControl[keymap[event.key]] = true;
         }
@@ -202,7 +252,6 @@ $(document).ready(function () {
         if (event.key == 'ArrowRight') {
             fish.facingDirection = 'right';
         }
-        // console.log(keyboardControl);
     }
 
     // a bug is generated every 3-5 secs
@@ -228,13 +277,13 @@ $(document).ready(function () {
         let x = fish.x + fish.collider.xOffset;
         let y = fish.y + fish.collider.yOffset;
         // below waterline
-        if (y < waterlinePts[fish.x + fish.collider.xOffset] + 100){
-            console.log("out of water");
+        if (y < waterlinePts[fish.x + fish.collider.xOffset] + 100) {
+            // console.log("out of water");
             return false;
         }
         // does not collide with fishbowl
-        if (fishbowl.radius - Math.sqrt(Math.pow(x - fishbowl.originAbsX, 2) + Math.pow(y - fishbowl.originAbsY, 2)) < fish.collider.radius){
-            console.log("collide with fishbowl");
+        if (fishbowl.radius - Math.sqrt(Math.pow(x - fishbowl.originAbsX, 2) + Math.pow(y - fishbowl.originAbsY, 2)) < fish.collider.radius) {
+            // console.log("collide with fishbowl");
             return false;
         }
         return true;
