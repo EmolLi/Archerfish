@@ -11,7 +11,16 @@ $(document).ready(function () {
         rightOpeningAbsY: 101
     };
 
-    let bugPic = new Image();
+    let bugMeta = {
+        img: new Image(),
+        collider: {
+            xOffset: 15,
+            yOffset: 25,
+            width: 50,
+            height: 30
+        }
+    };
+    // let bugPic = new Image();
     let fish = {
         img: new Image(),
         x: 400, // used to draw fish on canvas
@@ -53,7 +62,7 @@ $(document).ready(function () {
     function init() {
         fishbowl.img.src = '../css/fishbowl.png';
         fish.img.src = '../css/fish.png';
-        bugPic.src = '../css/bug.png';
+        bugMeta.img.src = '../css/bug.png';
 
         // generate waterline pts
         let width = 500, height = 700;
@@ -67,7 +76,7 @@ $(document).ready(function () {
     }
 
     function draw() {
-        var ctx = document.getElementById('canvas').getContext('2d');
+        let ctx = document.getElementById('canvas').getContext('2d');
         ctx.clearRect(0, 0, 700, 700);
 
         ctx.translate(0, 100);
@@ -75,9 +84,9 @@ $(document).ready(function () {
 
         // draw water line
         ctx.beginPath();
-        var startPos = 30;  // fishbowl has width
+        let startPos = 30;  // fishbowl has width
         ctx.moveTo(startPos, waterlinePts[0]);
-        for (var t = 1; t < waterlinePts.length; t++) {
+        for (let t = 1; t < waterlinePts.length; t++) {
             ctx.lineTo(t + startPos, waterlinePts[t]);
         }
         ctx.strokeStyle = "rgba(25, 126, 255, 0.49)";
@@ -121,19 +130,29 @@ $(document).ready(function () {
         // console.log(bugs);
         _.forEach(bugs, b => {
             ctx.drawImage(b.img, b.x, b.y, 80, 80 * b.img.height / b.img.width);
+
+            ctx.beginPath();
+            // ctx.rect(b.x + 22, b.y + 30, 35, 20);
+            ctx.rect(b.x + bugMeta.collider.xOffset, b.y + bugMeta.collider.yOffset, bugMeta.collider.width, bugMeta.collider.height);
+            ctx.stroke();
         });
+
 
         // bubbles
         shootBubbles();
         calcBubblesPosition();
         _.forEach(bubbles, b => {
             ctx.beginPath();
-            ctx.arc(b.x, b.y , b.size, 0, 2 * Math.PI);
+            ctx.arc(b.x, b.y, b.size, 0, 2 * Math.PI);
             ctx.stroke();
         });
 
-        // clear all statese
+        // clear all states
         _.forEach(_.keys(keyboardControl), s => keyboardControl[s] = false);
+
+
+        // collision detection
+        collisionDetection();
 
         window.requestAnimationFrame(draw);
     }
@@ -145,7 +164,7 @@ $(document).ready(function () {
      */
 
     function calcWaterline(width, height, displace, roughness) {
-        var points = [],
+        let points = [],
             // Gives us a power of 2 based on our width
             power = Math.pow(2, Math.ceil(Math.log(width) / (Math.log(2))));
 
@@ -156,9 +175,9 @@ $(document).ready(function () {
         displace *= roughness;
 
         // Increase the number of segments
-        for (var i = 1; i < power; i *= 2) {
+        for (let i = 1; i < power; i *= 2) {
             // Iterate through each segment calculating the center point
-            for (var j = (power / i) / 2; j < power; j += power / i) {
+            for (let j = (power / i) / 2; j < power; j += power / i) {
                 points[j] = ((points[j - (power / i) / 2] + points[j + (power / i) / 2]) / 2);
                 points[j] += (Math.random() * displace * 2) - displace
             }
@@ -186,9 +205,11 @@ $(document).ready(function () {
         if (isShootingBubble) keyboardControl.bubbles = false;
         if (keyboardControl.bubbles) {
             isShootingBubble = true;
-            new Promise((resolve, reject) => {
-                for (let i = 1; i <= bubblesSize.length; i++){
-                    setTimeout(() => {createBubble(bubblesSize[i - 1]);}, 500 * i);
+            new Promise((resolve) => {
+                for (let i = 1; i <= bubblesSize.length; i++) {
+                    setTimeout(() => {
+                        createBubble(bubblesSize[i - 1]);
+                    }, 500 * i);
                 }
                 setTimeout(() => resolve(), bubblesSize.length * 1000);
             }).then(() => isShootingBubble = false);
@@ -200,10 +221,18 @@ $(document).ready(function () {
             b.y--;
         })
     }
+
     function calcBugPosition() {
-        _.forEach(_.keys(bugs), b => {
-            bugs[b].x += windSpeed * 0.1;
-            if (bugs[b].x >= canvasWidth) delete bugs[b];
+        _.forEach(bugs, b=> {
+            // let b = bugs[bid];
+            if (!b.hit){
+                b.x += windSpeed * 0.1;
+                if (b.x >= canvasWidth) delete bugs[b.id];
+            }
+            else {
+                b.speed = b.speed ? {x: b.speed.x, y: b.speed.y + 1} : {x: 0, y: 1};
+                b.y += b.speed.y;
+            }
         });
     }
 
@@ -213,15 +242,14 @@ $(document).ready(function () {
         while (bugs.hasOwnProperty(id)) {    // make sure no duplicate id
             id = window.makeID();
         }
-        let bug = {
-            img: bugPic,
+        bugs[id] = {
+            img: bugMeta.img,
             // img: new Image(),
             x: 0,
             y: Math.random() * 30,
             id: id
         };
         // bug.img.src = '../css/bug.png';
-        bugs[id] = bug;
     };
 
     let createBubble = function (size) {
@@ -229,7 +257,7 @@ $(document).ready(function () {
         while (bubbles.hasOwnProperty(id)) {
             id = window.makeID();
         }
-        let bubble = {
+        bubbles[id] = {
             size: size,
             x: fish.facingDirection == 'left' ?
                 fish.x + fish.collider.xOffset - 0.5 * (fish.collider.radius + 5) :
@@ -237,7 +265,6 @@ $(document).ready(function () {
             y: fish.y + fish.collider.yOffset - 0.866 * (fish.collider.radius + 5),
             id: id
         };
-        bubbles[id] = bubble;
     };
 
     function keyDownHandler(event) {
@@ -287,8 +314,68 @@ $(document).ready(function () {
             return false;
         }
         return true;
-
     }
+
+    /**
+     * treat bubble as a point
+     */
+    function bubbleCollisionDetection() {
+        _.forEach(bubbles, b => {
+            if (collisionDetectionWithFishBowl(b.x, b.y, true)) {
+                console.log(b.id + "hit fishbowl");
+            }
+            let bugID = collisionDetectionWithBugs(b.x, b.y);
+            if (bugID) {
+                // console.log(b.id + "hit bug " + bugID);
+                delete bubbles[b.id];   // delete bubble
+                bugs[bugID].hit = true;
+            }
+
+
+        })
+    }
+
+
+    function collisionDetection() {
+        bubbleCollisionDetection();
+        collisionDetectionWithFallingBugs();
+    }
+
+    /**
+     *
+     * @param x
+     * @param y
+     * @return null if it collided with no bug, else id of the bug
+     */
+    function collisionDetectionWithBugs(x, y) {
+        for (let bid in bugs) {
+            let b = bugs[bid];
+            if (x > b.x + bugMeta.collider.xOffset &&
+                x < b.x + bugMeta.collider.xOffset + bugMeta.collider.width &&
+                y > b.y + bugMeta.collider.yOffset &&
+                y < b.y + bugMeta.collider.yOffset + bugMeta.collider.height) {
+                // console.log(b.id);
+                return b.id;    // for sure it will only collide with one bug as bugs do not overlap
+            }
+        }
+        return null;
+    }
+
+    function collisionDetectionWithFallingBugs() {
+        for (let bid in bugs) {
+            let b = bugs[bid];
+            if (b.hit){
+                let x = Math.floor(b.x + bugMeta.collider.xOffset + bugMeta.collider.width / 2);
+                let y = b.y + bugMeta.collider.yOffset;
+                console.log(x, y);
+                // encounter water
+                if (y > waterlinePts[x] + 100){
+                    console.log("water");
+                    delete bugs[b.id];
+                }
+            }
+            }
+    };
 
     /**
      * collision detection
@@ -324,8 +411,8 @@ $(document).ready(function () {
 
     // get mouse position -> collision detection test
     $('body').click(function (e) { //Default mouse Position
-        console.log(e.pageX + ' , ' + e.pageY);
-        collisionDetectionWithFishBowl(e.pageX, e.pageY, true);
+        // console.log(e.pageX + ' , ' + e.pageY);
+        // collisionDetectionWithBugs(e.pageX, e.pageY);
     });
 
 
