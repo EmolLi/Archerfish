@@ -50,6 +50,7 @@ $(document).ready(function () {
     let bugs = {};
 
     let waterlinePts;
+    let waterlineStartPos = 30;
 
     // player control
     let fishSpeed = 3;
@@ -287,7 +288,7 @@ $(document).ready(function () {
         while (bubbles.hasOwnProperty(id)) {
             id = window.makeID();
         }
-        bubbles[id] = {
+        let bubble = {
             size: size,
             x: fish.x + fish.collider.xOffset - Math.cos(fish.facingAngle) * (fish.collider.radius + 5),
             y: fish.y + fish.collider.yOffset - Math.sin(fish.facingAngle)* (fish.collider.radius + 5),
@@ -297,6 +298,11 @@ $(document).ready(function () {
         },
             id: id
         };
+        console.log(bubble.y, waterlinePts[Math.floor(bubble.x - waterlineStartPos)]);
+        if (bubble.y < waterlinePts[Math.floor(bubble.x - waterlineStartPos)] + 100) bubbles[bubble.id] = bubble;
+
+
+
     };
 
     function keyDownHandler(event) {
@@ -333,6 +339,12 @@ $(document).ready(function () {
                     b.speed.x = bugMeta.baseSpeed.x + windSpeed * 0.1;}
                     );
 
+            // upate bubble speed
+            _.forEach(bubbleBaseSpeed, b => {
+                if (b.y < 100)  // influenced by wind if above tank
+                    b.speed.x = b.speed.x + windSpeed * 0.1;}
+            );
+
             $('#windSpeed').text(windSpeed);
             windSpeedUpdate();
         }, time)
@@ -343,7 +355,7 @@ $(document).ready(function () {
         let x = fish.x + fish.collider.xOffset;
         let y = fish.y + fish.collider.yOffset;
         // below waterline
-        if (y < waterlinePts[fish.x + fish.collider.xOffset] + 100) {
+        if (y < waterlinePts[Math.floor(fish.x + fish.collider.xOffset - waterlineStartPos)] + 100) {
             // console.log("out of water");
             return false;
         }
@@ -360,15 +372,20 @@ $(document).ready(function () {
      */
     function bubbleCollisionDetection() {
         _.forEach(bubbles, b => {
-            if (collisionDetectionWithFishBowl(b.x, b.y, true)) {
-                console.log(b.id + "hit fishbowl");
+            // encounter water
+            if (b.y > waterlinePts[Math.floor(b.x - waterlineStartPos)] + 100){
+                console.log("water");
+                delete bubbles[b.id];
             }
+
+
             let bugID = collisionDetectionWithBugs(b.x, b.y);
             if (bugID) {
                 // console.log(b.id + "hit bug " + bugID);
                 delete bubbles[b.id];   // delete bubble
                 bugs[bugID].hit = true;
             }
+
 
 
         })
@@ -408,7 +425,7 @@ $(document).ready(function () {
                 let y = b.y + bugMeta.collider.yOffset;
                 // console.log(x, y);
                 // encounter water
-                if (y > waterlinePts[x] + 100){
+                if (y > waterlinePts[Math.floor(x - waterlineStartPos)] + 100){
                     console.log("water");
                     delete bugs[b.id];
                 }
