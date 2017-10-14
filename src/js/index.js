@@ -1,5 +1,6 @@
 $(document).ready(function () {
     const canvasWidth = 700;
+    const canvasHeight = 800;
     let g = 0.2;
     let fishbowl = {
         img: new Image(),
@@ -42,6 +43,7 @@ $(document).ready(function () {
     };
     let bubblesSize = [3, 5, 8];
     let bubbles = {};
+    let bubbleBaseSpeed = 15;
     let isShootingBubble = false;
 
 
@@ -219,18 +221,31 @@ $(document).ready(function () {
                 for (let i = 1; i <= bubblesSize.length; i++) {
                     setTimeout(() => {
                         createBubble(bubblesSize[i - 1]);
-                    }, 500 * i);
+                    }, 100 * i);
                 }
-                setTimeout(() => resolve(), bubblesSize.length * 1000);
+                setTimeout(() => resolve(), bubblesSize.length * 200);
             }).then(() => isShootingBubble = false);
         }
     }
 
+
+    function outOfScope(obj) {
+        return obj.x < 0 || obj.x > canvasWidth || obj.y < 0 || obj.y > canvasHeight;
+    }
     function calcBubblesPosition() {
         _.forEach(bubbles, b => {
-            b.y--;
+            b.speed.y += g;
+
+            b.x += b.speed.x;
+            b.y += b.speed.y;
+            if (outOfScope(b)) {
+                delete bubbles[b.id];
+                // console.log("delete bubble" + b.id);
+            }
+
         })
     }
+
 
     function calcBugPosition() {
         _.forEach(bugs, b=> {
@@ -241,6 +256,10 @@ $(document).ready(function () {
 
             b.x += b.speed.x;
             // console.log(b.x);
+            if (outOfScope(b)) {
+                delete bugs[b.id];
+                // console.log("delete bug" + b.id);
+            }
             if (b.x >= canvasWidth) delete bugs[b.id];
             b.y += b.speed.y;
         });
@@ -270,10 +289,12 @@ $(document).ready(function () {
         }
         bubbles[id] = {
             size: size,
-            x: fish.facingDirection == 'left' ?
-                fish.x + fish.collider.xOffset - 0.5 * (fish.collider.radius + 5) :
-                fish.x + fish.collider.xOffset + 0.5 * (fish.collider.radius + 5),
-            y: fish.y + fish.collider.yOffset - 0.866 * (fish.collider.radius + 5),
+            x: fish.x + fish.collider.xOffset - Math.cos(fish.facingAngle) * (fish.collider.radius + 5),
+            y: fish.y + fish.collider.yOffset - Math.sin(fish.facingAngle)* (fish.collider.radius + 5),
+            speed: {
+                x: - Math.cos(fish.facingAngle) * bubbleBaseSpeed,
+                y: - Math.sin(fish.facingAngle) * bubbleBaseSpeed
+        },
             id: id
         };
     };
