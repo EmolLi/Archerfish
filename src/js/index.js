@@ -1,5 +1,6 @@
 $(document).ready(function () {
     const canvasWidth = 700;
+    let g = 0.2;
     let fishbowl = {
         img: new Image(),
         originAbsX: 290,
@@ -18,6 +19,10 @@ $(document).ready(function () {
             yOffset: 25,
             width: 50,
             height: 30
+        },
+        baseSpeed: {
+            x: 0.2,
+            y: 0
         }
     };
     // let bugPic = new Image();
@@ -25,6 +30,9 @@ $(document).ready(function () {
         img: new Image(),
         x: 400, // used to draw fish on canvas
         y: 400,
+        facingAngle: Math.PI / 2,
+        facingAngleMin: Math.PI / 3,
+        facingAngleMax: 2 * Math.PI / 3,
         facingDirection: 'right',
         collider: { // a circle, used for collision detection
             xOffset: 0,
@@ -112,12 +120,14 @@ $(document).ready(function () {
         // draw fish
         ctx.save();
         ctx.translate(fish.x, fish.y);
+        ctx.rotate(fish.facingAngle);
+        /**
         if (fish.facingDirection == 'left') {
             ctx.rotate(Math.PI / 3);
         }
         if (fish.facingDirection == 'right') {
             ctx.rotate(2 * Math.PI / 3);
-        }
+        }**/
         // ctx.translate(fishX, fishY);
         ctx.drawImage(fish.img, -30, -20, 80, 80 * fish.img.height / fish.img.width);
 
@@ -169,9 +179,9 @@ $(document).ready(function () {
             power = Math.pow(2, Math.ceil(Math.log(width) / (Math.log(2))));
 
         // Set the initial left point
-        points[0] = height / 2 + (Math.random() * displace * 0.3) - displace * 0.3;
+        points[0] = -50 + height / 2 + (Math.random() * displace * 0.3) - displace * 0.3;
         // set the initial right point
-        points[power] = height / 2 + (Math.random() * displace) - displace * 0.3;
+        points[power] = -50 + height / 2 + (Math.random() * displace) - displace * 0.3;
         displace *= roughness;
 
         // Increase the number of segments
@@ -225,14 +235,14 @@ $(document).ready(function () {
     function calcBugPosition() {
         _.forEach(bugs, b=> {
             // let b = bugs[bid];
-            if (!b.hit){
-                b.x += windSpeed * 0.1;
-                if (b.x >= canvasWidth) delete bugs[b.id];
+            if (b.hit){
+                b.speed = {x: b.speed.x, y: b.speed.y + g};
             }
-            else {
-                b.speed = b.speed ? {x: b.speed.x, y: b.speed.y + 1} : {x: 0, y: 1};
-                b.y += b.speed.y;
-            }
+
+            b.x += b.speed.x;
+            // console.log(b.x);
+            if (b.x >= canvasWidth) delete bugs[b.id];
+            b.y += b.speed.y;
         });
     }
 
@@ -247,7 +257,8 @@ $(document).ready(function () {
             // img: new Image(),
             x: 0,
             y: Math.random() * 30,
-            id: id
+            id: id,
+            speed: {x: bugMeta.baseSpeed.x + windSpeed * 0.1, y: 0}
         };
         // bug.img.src = '../css/bug.png';
     };
@@ -274,10 +285,10 @@ $(document).ready(function () {
         }
 
         if (event.key == 'ArrowLeft') {
-            fish.facingDirection = 'left';
+            if (fish.facingAngle > fish.facingAngleMin) fish.facingAngle -= Math.PI/180;
         }
         if (event.key == 'ArrowRight') {
-            fish.facingDirection = 'right';
+            if (fish.facingAngle < fish.facingAngleMax) fish.facingAngle += Math.PI/180;
         }
     }
 
@@ -294,6 +305,13 @@ $(document).ready(function () {
         let time = Math.random() * 1000 + 1000;
         setTimeout(() => {
             windSpeed = Math.random() * 8 + 2;
+
+            // upate bug speed
+            _.forEach(bugs, b => {
+                if (b.y < 100)  // influenced by wind if above tank
+                    b.speed.x = bugMeta.baseSpeed.x + windSpeed * 0.1;}
+                    );
+
             $('#windSpeed').text(windSpeed);
             windSpeedUpdate();
         }, time)
@@ -367,7 +385,7 @@ $(document).ready(function () {
             if (b.hit){
                 let x = Math.floor(b.x + bugMeta.collider.xOffset + bugMeta.collider.width / 2);
                 let y = b.y + bugMeta.collider.yOffset;
-                console.log(x, y);
+                // console.log(x, y);
                 // encounter water
                 if (y > waterlinePts[x] + 100){
                     console.log("water");
