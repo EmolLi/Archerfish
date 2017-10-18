@@ -1,7 +1,9 @@
 # Archerfish
 
 ## Setup
-    open file src/index.html in browser
+   open file src/index.html in browser
+    
+   or try it [here](https://archerfish-emolli.c9users.io/)
 
 ## ref
 - [js game engine basics](https://developer.mozilla.org/en-US/docs/Games/Introduction)
