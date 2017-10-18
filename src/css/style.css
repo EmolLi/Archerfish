@@ -1,0 +1,10 @@
+section{
+    position: absolute;
+    width: 300px;
+    right: 0px;
+    top: 0px;
+}
+
+body{
+    overflow: hidden;
+}

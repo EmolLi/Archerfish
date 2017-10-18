@@ -29,8 +29,8 @@ $(document).ready(function () {
     // let bugPic = new Image();
     let fish = {
         img: new Image(),
-        x: 400, // used to draw fish on canvas
-        y: 400,
+        x: 350, // used to draw fish on canvas
+        y: 430,
         facingAngle: Math.PI / 2,
         facingAngleMin: Math.PI / 3,
         facingAngleMax: 2 * Math.PI / 3,
@@ -71,9 +71,9 @@ $(document).ready(function () {
     };
 
     function init() {
-        fishbowl.img.src = '../css/fishbowl.png';
-        fish.img.src = '../css/fish.png';
-        bugMeta.img.src = '../css/bug.png';
+        fishbowl.img.src = './css/fishbowl.png';
+        fish.img.src = './css/fish.png';
+        bugMeta.img.src = './css/bug.png';
 
         // generate waterline pts
         let width = 500, height = 700;
@@ -106,6 +106,7 @@ $(document).ready(function () {
 
 
         // fishbowl size & position
+        /**
         ctx.beginPath();
         ctx.arc(290, 230, 260, 0, 2 * Math.PI);
         ctx.stroke();
@@ -118,19 +119,13 @@ $(document).ready(function () {
 
         ctx.beginPath();
         ctx.arc(fish.x, fish.y + 5, 38, 0, 2 * Math.PI);
-        ctx.stroke();
+        ctx.stroke();**/
 
         // draw fish
         ctx.save();
         ctx.translate(fish.x, fish.y);
         ctx.rotate(fish.facingAngle);
-        /**
-        if (fish.facingDirection == 'left') {
-            ctx.rotate(Math.PI / 3);
-        }
-        if (fish.facingDirection == 'right') {
-            ctx.rotate(2 * Math.PI / 3);
-        }**/
+
         // ctx.translate(fishX, fishY);
         ctx.drawImage(fish.img, -30, -20, 80, 80 * fish.img.height / fish.img.width);
 
@@ -143,11 +138,11 @@ $(document).ready(function () {
         // console.log(bugs);
         _.forEach(bugs, b => {
             ctx.drawImage(b.img, b.x, b.y, 80, 80 * b.img.height / b.img.width);
-
+/**
             ctx.beginPath();
             // ctx.rect(b.x + 22, b.y + 30, 35, 20);
             ctx.rect(b.x + bugMeta.collider.xOffset, b.y + bugMeta.collider.yOffset, bugMeta.collider.width, bugMeta.collider.height);
-            ctx.stroke();
+            ctx.stroke();**/
         });
 
 
@@ -182,9 +177,9 @@ $(document).ready(function () {
             power = Math.pow(2, Math.ceil(Math.log(width) / (Math.log(2))));
 
         // Set the initial left point
-        points[0] = -50 + height / 2 + (Math.random() * displace * 0.3) - displace * 0.3;
+        points[0] = height / 2 + (Math.random() * displace * 0.3) - displace * 0.3;
         // set the initial right point
-        points[power] = -50 + height / 2 + (Math.random() * displace) - displace * 0.3;
+        points[power] = height / 2 + (Math.random() * displace) - displace * 0.3;
         displace *= roughness;
 
         // Increase the number of segments
@@ -298,11 +293,17 @@ $(document).ready(function () {
         },
             id: id
         };
-        console.log(bubble.y, waterlinePts[Math.floor(bubble.x - waterlineStartPos)]);
-        if (bubble.y < waterlinePts[Math.floor(bubble.x - waterlineStartPos)] + 100) bubbles[bubble.id] = bubble;
-
-
-
+        // console.log(bubble.y, waterlinePts[Math.floor(bubble.x - waterlineStartPos)]);
+        if (bubble.y < waterlinePts[Math.floor(bubble.x - waterlineStartPos)] + 100){
+            bubbles[bubble.id] = bubble;
+            setTimeout(()=>{
+                delete bubbles[bubble.id];
+            }, 4000);
+        }
+        else {
+            if (size == bubblesSize[0])
+            alert("You are deep in the fishbowl, try swimming up to the water surface by pressing 'W'!");
+        }
     };
 
     function keyDownHandler(event) {
@@ -378,6 +379,16 @@ $(document).ready(function () {
                 delete bubbles[b.id];
             }
 
+            // fishbowl collision detection
+            if (collisionDetectionWithFishBowl(b.x, b.y, true)){
+                let collidedTime = Date.now();
+                if (!b.collidedTime || collidedTime - b.collidedTime > 5){
+                    b.speed = reflectedDirection({x: b.x, y:b.y}, b.speed, 0.9);
+                    b.collidedTime = collidedTime;
+                }
+                console.log(b.x, b.y);
+            }
+
 
             let bugID = collisionDetectionWithBugs(b.x, b.y);
             if (bugID) {
@@ -429,6 +440,17 @@ $(document).ready(function () {
                     console.log("water");
                     delete bugs[b.id];
                 }
+
+
+                // fishbowl collision detection
+                if (collisionDetectionWithFishBowl(x, y, true)){
+                    let collided = fishbowl.originAbsX - b.x < 0 ? 'right' : 'left';
+                    if (!b.collided || b.collided != collided){
+                        b.speed = reflectedDirection({x: b.x, y:b.y}, b.speed, 0.55);
+                        b.collided = collided;
+                    }
+                    console.log(b.x, b.y);
+                }
             }
             }
     };
@@ -463,11 +485,33 @@ $(document).ready(function () {
         return false;
     }
 
+
+
+
+    // reflection
+    function reflectedDirection(reflectedPt, orignalSpeed, res) {
+        // circle angle
+        let a = Math.atan((1.0) * (fishbowl.originAbsY - reflectedPt.y) / (fishbowl.originAbsX - reflectedPt.x));
+        // speed angle
+        let b = Math.atan((1.0) * orignalSpeed.y / orignalSpeed.x);
+
+        let newSpeedM = Math.sqrt(Math.pow(orignalSpeed.x, 2) + Math.pow(orignalSpeed.y, 2)) * res;
+
+        let c = 2 * a - b - Math.PI/2;
+        // if (c < - Math.PI) c -= Math.PI;
+        return {
+            x: (fishbowl.originAbsX - reflectedPt.x < 0) ? newSpeedM * Math.sin(c) : - newSpeedM * Math.sin(c),
+            y:  (fishbowl.originAbsX - reflectedPt.x < 0) ? - newSpeedM * Math.cos(c): newSpeedM * Math.cos(c)
+        }
+
+
+    }
+
     init();
 
     // get mouse position -> collision detection test
     $('body').click(function (e) { //Default mouse Position
-        // console.log(e.pageX + ' , ' + e.pageY);
+        console.log(e.pageX + ' , ' + e.pageY);
         // collisionDetectionWithBugs(e.pageX, e.pageY);
     });
 
